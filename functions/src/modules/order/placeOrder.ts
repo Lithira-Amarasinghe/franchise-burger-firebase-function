@@ -8,13 +8,12 @@ export const placeOrder = functions.firestore.document("carts/{uid}")
     try {
       const newData = change.after.data();
       const previousData = change.before.data();
-      if (!previousData.createdAt && newData.createdAt) {
+      if (!previousData.status && newData.status=="ORDER_PLACED") {
         const data = newData;
         const date = new Date();
         console.log(data);
         const orderId = (+date.getTime()) * 2 + 500000;
         data.orderId = orderId;
-        data.status = "ORDER_PLACED";
         data.createdAt = date.toISOString();
         console.log(data);
         return admin.firestore().collection("orders").
@@ -22,7 +21,10 @@ export const placeOrder = functions.firestore.document("carts/{uid}")
           .then((result)=>{
             console.log(result);
             console.log("Field added:", newData.yourField);
-            admin.firestore().collection("carts").doc(uid).delete();
+            admin.firestore().collection("carts").
+              doc(uid).delete().then((del)=>{
+                console.log(del);
+              });
           })
           .catch((error)=>{
             console.log("Error in placing order: ", error);
