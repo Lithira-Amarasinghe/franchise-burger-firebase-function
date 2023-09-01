@@ -11,7 +11,7 @@ export const placeOrder = functions.firestore.document("carts/{uid}")
         const data = newData;
         const date = new Date();
         console.log(data);
-        const orderId = (+date.getTime()) * 27 + 5027509;
+        const orderId = ((+date.getTime()) * 37 + 5227509).toString().trim();
         data.orderId = orderId;
         data.createdAt = date.toISOString();
         console.log(data);
