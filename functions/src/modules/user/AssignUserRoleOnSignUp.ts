@@ -1,7 +1,6 @@
 import functions = require("firebase-functions");
 import admin = require("firebase-admin");
 
-admin.initializeApp();
 
 export const assignUserRoleOnSignUp = functions.auth.user()
   .onCreate(async (user) => {

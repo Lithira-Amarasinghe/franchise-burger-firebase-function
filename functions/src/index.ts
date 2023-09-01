@@ -1,7 +1,11 @@
-import assignUserRoleOnSignUp =
-    require("./modules/user/AssignUserRoleOnSignUp")
-import placeOrder = require("./modules/order/placeOrder")
+/*eslint-disable*/
+import admin = require("firebase-admin");
+admin.initializeApp();
+
+const assignUserRoleOnSignUp =
+    require("./modules/user/AssignUserRoleOnSignUp");
+const placeOrder = require("./modules/order/placeOrder");
 
 exports.placeOrder = placeOrder.placeOrder;
-// exports.assignUserRoleOnSign =
-//     assignUserRoleOnSignUp.assignUserRoleOnSignUp;
+exports.assignUserRoleOnSign =
+    assignUserRoleOnSignUp.assignUserRoleOnSignUp;

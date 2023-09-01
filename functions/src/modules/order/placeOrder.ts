@@ -1,6 +1,5 @@
 import functions = require("firebase-functions");
 import admin = require("firebase-admin");
-admin.initializeApp();
 
 export const placeOrder = functions.firestore.document("carts/{uid}")
   .onUpdate((change, context) => {
@@ -12,7 +11,7 @@ export const placeOrder = functions.firestore.document("carts/{uid}")
         const data = newData;
         const date = new Date();
         console.log(data);
-        const orderId = (+date.getTime()) * 2 + 500000;
+        const orderId = (+date.getTime()) * 27 + 5027509;
         data.orderId = orderId;
         data.createdAt = date.toISOString();
         console.log(data);
