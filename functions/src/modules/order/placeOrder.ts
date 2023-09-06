@@ -22,6 +22,7 @@ export const placeOrder = functions.firestore.document("carts/{uid}")
         const orderId = ((+date.getTime()) * 37 + 5227509).toString().trim();
         data.orderId = orderId;
         data.createdAt = date.toISOString();
+        data.isPrinted = false;
         console.log(data);
         addOrderPlacedToFoodItem(data);
         return admin.firestore().collection("orders").
