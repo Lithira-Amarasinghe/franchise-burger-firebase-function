@@ -1,8 +1,5 @@
 /*eslint-disable*/
-// @ts-ignore
-
 import * as corsModule from 'cors'
-import {from} from "rxjs";
 
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
@@ -15,6 +12,12 @@ const cors = corsModule({origin: true}); // Import the cors module
 
 const dimensionConst = 2.83464567;
 
+function calculateReceiptHeight(items: any[]) {
+    let noOfItems = items.length;
+    let height = noOfItems * 35
+    height += 410;
+    return height;
+}
 
 export const generateReceipt = functions.https.onRequest((request, response) => {
 
@@ -22,16 +25,40 @@ export const generateReceipt = functions.https.onRequest((request, response) => 
         try {
             const data = request.body;
             const orderId = data.orderId;
+            const address = data.address;
+            const email = data.email;
+            const phoneNo = data.phoneNo;
+            const amount = data.amount;
+
             console.log('Order id : ', orderId);
+
+            const items = [];
+            await admin.firestore().collection("orders").doc(orderId.toString())
+                .get().then(snapshot => {
+                    const docData = snapshot.data();
+                    const foodItems = docData?.foodItems;
+                    for (const [key, value] of Object.entries(foodItems)) {
+                        items.push(
+                            // @ts-ignore
+                            { name: value?.name, unitPrice: value?.sellingPrice, quantity: value.quantity, total: value.quantity * value.sellingPrice,
+                            })
+                    }
+                });
+
+
+            const pdfDocHeight = calculateReceiptHeight(items);
+            let y = 0;
+
+            console.log('Receipt height : ', pdfDocHeight)
             // Create a PDF document
             const pdfDoc: any = new PDFDocument({
-                size: [226, 300], // Width and height in points (8.5 x 11 inches)
-                margins: {
-                    top: 20,       // Top margin in points (1 inch)
-                    bottom: 20,    // Bottom margin in points (1 inch)
-                    left: 10,      // Left margin in points (0.5 inch)
-                    right: 10,     // Right margin in points (0.5 inch)
-                },
+                size: [227, pdfDocHeight],
+                margins:{
+                    left:10,
+                    top:10,
+                    bottom:10,
+                    right:10
+                }
             });
             const filePath = `receipts/${orderId}.pdf`; // Specify your custom path here
             const writeStream = admin
@@ -45,62 +72,55 @@ export const generateReceipt = functions.https.onRequest((request, response) => 
 
             const taxRate = 0.1; // 10% tax rate
 
-            // await createReceiptHeader(pdfDoc, orderId);
-            await admin.firestore().collection("orders").doc(orderId.toString())
-                .get().then(snapshot => {
+            await admin.firestore().collection("orders").doc(orderId.toString()).get()
+                .then(snapshot => {
                     const docData = snapshot.data();
                     console.log('Order details (firestore) : ', docData)
                     let orderDate = new Date(docData.createdAt).toLocaleString();
 
                     // Receipt Header
                     const restaurantName = "FRANCHISE BURGER";
-                    pdfDoc.fontSize(10).text(restaurantName, {align: 'center', height: 10});
-                    pdfDoc.moveDown(2);
-                    pdfDoc.fontSize(8).text(`Order Number: ${orderId}`);
-                    pdfDoc.moveDown(1)
-                    pdfDoc.text(`Order Date: ${orderDate}`);
-                    pdfDoc.text('-----------------------------------------------------------------------------', {align: 'center'})
+                    pdfDoc.font('Helvetica-Bold');
+                    pdfDoc.fontSize(14).text(restaurantName, {align: 'center'});
                     pdfDoc.moveDown();
+                    pdfDoc.fontSize(10).text(`Order Number: ${orderId}`,{width:200});
+                    pdfDoc.moveDown();
+                    pdfDoc.text(`Order Date: ${orderDate}`,);
+                    pdfDoc.moveDown();
+                    pdfDoc.text(`Location : ${address}`,);
+                    pdfDoc.moveDown();
+                    pdfDoc.text(`${phoneNo} / ${email}`,);
+                    pdfDoc.moveDown();
+                    pdfDoc.text(`Mode      : ${docData.mode}`);
+                    pdfDoc.fontSize(8).text('______________________________________________', {align: 'center'})
                 })
-
-
-            // createReceiptItemsHeader(pdfDoc);
+                .catch(error =>{
+                    console.error(error)
+                })
+            y = 190;
             // Receipt Items
-            pdfDoc.font('Helvetica-Bold');
-            pdfDoc.text('Item Name', 10, 100, { width: 50, align: 'left'});
-            pdfDoc.text('Unit Price', 80, 100, { width: 50,  align: 'right'});
-            pdfDoc.text('Quantity', 130, 100, { width: 50, align: 'right'});
-            pdfDoc.text('total', 200, 100, { width: 50,  align: 'right'});
+            pdfDoc.font('Helvetica-Bold').fontSize(10);
+            pdfDoc.text('Item Name', 10, y, {width: 60, align: 'left'});
+            pdfDoc.text('Unit Price', 70, y, {width: 50, align: 'right'});
+            pdfDoc.text('Quantity', 130, y, {width: 50, align: 'right'});
+            pdfDoc.text('Total', 180, y, {width: 40, align: 'right'});
             pdfDoc.moveDown(1);
 
-
-            // await addReceiptItems(pdfDoc, orderId);
-            const items = [];
-            await admin.firestore().collection("orders").doc(orderId.toString())
-                .get().then(snapshot => {
-                    const docData = snapshot.data();
-                    const foodItems = docData.foodItems;
-                    for (const [key, value] of Object.entries(foodItems)) {
-                        items.push(
-                            // @ts-ignore
-    {  name: value?.name,unitPrice: value?.sellingPrice, quantity: value.quantity,total: value.quantity * value.sellingPrice,
-                            })
-                    }
-                });
-            pdfDoc.font('Helvetica');
+            pdfDoc.font('Helvetica').fontSize(10);
             console.log('FoodItems : ', items);
-            const tableTop = 100;
-            let y = tableTop + 20;
+            y += 20;
             for (const item of items) {
-                pdfDoc.text(item?.name, 10, y,{width: 50, align: 'left'});
-                pdfDoc.text(`$${item?.unitPrice}`, 100, y + 10,{width: 50, align: 'right' });
-                pdfDoc.text(`${item?.quantity}`, 130, y + 10, {width: 0, align: 'right'});
-                pdfDoc.text(`$${item?.total}`, 170, y + 10, {width: 0, align: 'right' });
+                pdfDoc.text(item?.name, 10, y, {width: 200, align: 'left'});
+                pdfDoc.text(`$${item?.unitPrice}`, 50, (y + 15), {width: 50, align: 'right'});
+                pdfDoc.text(`${item?.quantity}`, 110,  (y + 15) , {width: 50, align: 'right'});
+                pdfDoc.text(`$${item?.total}`, 180,  (y + 15) , {width: 40, align: 'right'});
                 pdfDoc.moveDown(1);
-                y += 30;
+                y += 35;
             }
+            y+=10
+            pdfDoc.text('--------------------------------------------------------------', 10, y,
+                {align: 'center'})
 
-            pdfDoc.text('-----------------------------------------------------------------------------', {align: 'center'})
             pdfDoc.moveDown();
 
             pdfDoc.font('Helvetica');
@@ -111,23 +131,35 @@ export const generateReceipt = functions.https.onRequest((request, response) => 
                 .then(snapshot => {
                     const docData = snapshot.data();
                     const totalPrice = docData.totalPrice;
+                    const taxPercentage = data?.taxPercentage || 0;
                     // Receipt Summary
                     pdfDoc.font('Helvetica-Bold');
-                    pdfDoc.text('Subtotal:', { width:'150',align: 'left', continued: true});
-                    pdfDoc.text(`$${totalPrice.toFixed(2)}`, { align: 'right'});
-                    pdfDoc.text('Tax (1%):', {width:'150', align: 'left', continued: true});
-                    const taxAmount = totalPrice * 0.03;
-                    pdfDoc.text(`$${taxAmount.toFixed(2)}`, { align: 'right'});
-                    pdfDoc.text('Total:', {width:'150', align: 'left', continued: true});
-                    const grandTotal = totalPrice + taxAmount;
-                    pdfDoc.text(`$${grandTotal.toFixed(2)}`, { align: 'right'});
+                    y+=20
+                    pdfDoc.text('Subtotal  :', 10 , y,  { align: 'left', continued:true});
+                    pdfDoc.text(`$${totalPrice.toFixed(2)}`, {align: 'right'});
+                    y+=20;
+                    pdfDoc.text('Tax         :',10 , y,  { align: 'left', continued:true});
+                    const taxAmount = totalPrice * taxPercentage/100;
+                    pdfDoc.text(`$${taxAmount.toFixed(2)}`, {align: 'right'});
+                    y+=20;
+                    pdfDoc.fontSize(12).text('Grand Total :',10 , y, {align: 'left', continued:true});
+                    const grandTotal = (totalPrice + taxAmount).toFixed(2);
+                    pdfDoc.text(`$${grandTotal}`, { align: 'right'});
+                    y+=20;
+                    pdfDoc.fontSize(10).text('CASH/CARD  :', 10 , y,  { align: 'left', continued:true});
+                    pdfDoc.text(`$${amount.toFixed(2)}`, {align: 'right'});
+                    y+=20;
+                    pdfDoc.text('Balance  :', 10 , y,  { align: 'left', continued:true});
+                    pdfDoc.text(`$${amount - grandTotal}`, {align: 'right'});
+
                     pdfDoc.moveDown();
                 });
+            // Receipt footer
 
-            // createReceiptFooter(pdfDoc);
             // Thank You Message
-            pdfDoc.fontSize(8).text('Thank you for dining with us!', {width:'215', align: 'center'});
-            pdfDoc.fontSize(8).text('-----------------------------------------------------------------------------', {width:'215',align: 'center'});
+            pdfDoc.fontSize(11).text('Thank you for dining with us!', { align: 'center'});
+            pdfDoc.fontSize(8).text('______________________________________________', {align: 'center'});
+            pdfDoc.fontSize(6).text('System by Lithira Amarasinghe . Contact me : amarasinghelithira@gmail.com', {align:'left'})
             // End the PDF
 
             pdfDoc.end();
@@ -161,30 +193,9 @@ export const generateReceipt = functions.https.onRequest((request, response) => 
                 //     });
                 response.status(200).send('Receipt PDF saved successfully');
             });
-        }catch (error){
-            console.log('Error : ',error);
+        } catch (error) {
+            console.log(error);
             response.status(500).send('Error in generating receipt')
         }
     })
 });
-
-// // Replace with your restaurant and order details
-// function createReceiptHeader(pdfDoc, orderId) {
-//
-// }
-//
-// function createReceiptItemsHeader(pdfDoc) {
-//
-// }
-//
-// function addReceiptItems(pdfDoc: any, orderId) {
-//
-// }
-//
-// function createReceiptSummary(pdfDoc: any, orderId) {
-//
-// }
-//
-// function createReceiptFooter(pdfDoc: any) {
-//
-// }
