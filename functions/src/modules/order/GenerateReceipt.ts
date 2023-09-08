@@ -111,9 +111,9 @@ export const generateReceipt = functions.https.onRequest((request, response) => 
             y += 20;
             for (const item of items) {
                 pdfDoc.text(item?.name, 10, y, {width: 200, align: 'left'});
-                pdfDoc.text(`$${item?.unitPrice}`, 50, (y + 15), {width: 50, align: 'right'});
+                pdfDoc.text(`$${item?.unitPrice.toFixed(2)}`, 50, (y + 15), {width: 50, align: 'right'});
                 pdfDoc.text(`${item?.quantity}`, 110,  (y + 15) , {width: 50, align: 'right'});
-                pdfDoc.text(`$${item?.total}`, 180,  (y + 15) , {width: 40, align: 'right'});
+                pdfDoc.text(`$${item?.total.toFixed(2)}`, 180,  (y + 15) , {width: 40, align: 'right'});
                 pdfDoc.moveDown(1);
                 y += 35;
             }
@@ -159,7 +159,7 @@ export const generateReceipt = functions.https.onRequest((request, response) => 
             // Thank You Message
             pdfDoc.fontSize(11).text('Thank you for dining with us!', { align: 'center'});
             pdfDoc.fontSize(8).text('______________________________________________', {align: 'center'});
-            pdfDoc.fontSize(6).text('System by Lithira Amarasinghe . Contact me : amarasinghelithira@gmail.com', {align:'left'})
+            pdfDoc.fontSize(7).text('System by Lithira Amarasinghe . Contact me : amarasinghelithira@gmail.com / +94 70 3674 775', {align:'left'})
             // End the PDF
 
             pdfDoc.end();

@@ -4,11 +4,19 @@ admin.initializeApp();
 
 const assignUserRoleOnSignUp=require("./modules/user/AssignUserRoleOnSignUp");
 const placeOrder = require("./modules/order/placeOrder");
-const orderReady = require("./modules/order/orderReady")
-const getAllUsers = require('./modules/user/GetAllUsers')
-const assignARole = require('./modules/user/AssignARole')
-const assignRoles = require('./modules/user/AssignRoles')
-const generateReceipt = require('./modules/order/GenerateReceipt')
+const orderReady = require("./modules/order/orderReady");
+const generateReceipt = require('./modules/order/GenerateReceipt');
+
+const getAllUsers = require('./modules/user/GetAllUsers');
+const assignARole = require('./modules/user/AssignARole');
+const assignRoles = require('./modules/user/AssignRoles');
+
+const terminal = require('./modules/stripe/Terminal');
+const terminal_payment = require('./modules/stripe/ProcessPayment');
+const simulate_card_tap = require('./modules/stripe/SimulateCardTapping');
+const payment_intent = require('./modules/stripe/PaymentIntent');
+
+const webhooks = require('./modules/stripe/WebHooks')
 
 // exports.placeOrder = placeOrder.placeOrder;
 // exports.orderReady = orderReady.orderReady;
@@ -17,4 +25,12 @@ const generateReceipt = require('./modules/order/GenerateReceipt')
 // exports.getAllUsers = getAllUsers.getAllUsers
 // exports.assignARole = assignARole.assignARole;
 // exports.assignRoles = assignRoles.assignRoles;
-exports.generateReceipt = generateReceipt.generateReceipt;
+
+// exports.generateReceipt = generateReceipt.generateReceipt;
+//
+exports.terminal = terminal.terminal;
+exports.terminal_payment = terminal_payment.processPayment;
+exports.simulate_card_tapping = simulate_card_tap.simulateCardTapping
+exports.payment_intent = payment_intent.paymentIntent
+
+// exports.webhooks = webhooks.webhooks;
