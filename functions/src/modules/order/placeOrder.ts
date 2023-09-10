@@ -1,3 +1,5 @@
+/*eslint-disable*/
+
 import functions = require("firebase-functions");
 import admin = require("firebase-admin");
 
@@ -7,6 +9,13 @@ function addOrderPlacedToFoodItem(data) {
   for (const [key, value] of Object.entries(foodItems)) {
     data.foodItems[key].status = "ORDER_PLACED";
   }
+}
+
+function addLastOrderIdToUser(uid, orderId){
+  admin.firestore().collection('user').doc(uid)
+      .update({lastOrderId:orderId})
+      .then(result=>console.log('Last order id added to user'))
+      .catch(error => console.error('Error is saving last order id : ',error))
 }
 
 export const placeOrder = functions.firestore.document("carts/{uid}")
@@ -25,6 +34,7 @@ export const placeOrder = functions.firestore.document("carts/{uid}")
         data.isPrinted = false;
         console.log(data);
         addOrderPlacedToFoodItem(data);
+        addLastOrderIdToUser(uid,orderId.toString());
         return admin.firestore().collection("orders").
           doc(orderId.toString()).set(data)
           .then((result)=>{
@@ -32,7 +42,7 @@ export const placeOrder = functions.firestore.document("carts/{uid}")
             console.log("Field added:", newData.yourField);
             admin.firestore().collection("carts").
               doc(uid).delete().then((del)=>{
-                console.log(del);
+                console.log("Cart cleared successfully");
               });
           })
           .catch((error)=>{

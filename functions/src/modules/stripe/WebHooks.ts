@@ -1,4 +1,7 @@
 /*eslint-disable*/
+const cors = require('cors'); // Import the cors module
+
+
 const functions = require('firebase-functions');
 const express = require('express');
 const app = express();
@@ -9,7 +12,9 @@ const stripe = require('stripe')
 // This is your Stripe CLI webhook secret for testing your endpoint locally.
 const signingSecret = "whsec_2f644nf6isYGMWsjheZjTms6FrjDKRgu";
 // Use body-parser middleware to capture the raw request body as a Buffer
-app.use(express.json());
+
+app.use(cors({origin: true}))
+
 app.post('/terminal-payment-success', express.raw({type: 'application/json'}), (request, response) => {
     let event = request.body;
     // Only verify the event if you have an endpoint secret defined.

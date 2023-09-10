@@ -35,7 +35,20 @@ app.get('/readers', async (request, response) => {
         } catch (error) {
             response.status(500).send(error)
         }
+})
 
+
+app.post('/cancel_payment', async (request, response) => {
+    const data = request?.body;
+    const terminalId = data?.terminalId;
+
+    try {
+        const reader = await stripe.terminal.readers.cancelAction(terminalId);
+        response.status(200).send(reader);
+
+    } catch (error) {
+        response.status(500).send(error);
+    }
 })
 
 app.get('', async (request, response) => {
@@ -47,7 +60,6 @@ app.get('', async (request, response) => {
         } catch (error) {
             response.status(500).send(error)
         }
-
 })
 
 export const terminal = functions.https.onRequest(app);
