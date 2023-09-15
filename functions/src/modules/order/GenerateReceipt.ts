@@ -15,7 +15,7 @@ const dimensionConst = 2.83464567;
 function calculateReceiptHeight(items: any[]) {
     let noOfItems = items.length;
     let height = noOfItems * 35
-    height += 410;
+    height += 490;
     return height;
 }
 
@@ -23,19 +23,28 @@ export const generateReceipt = functions.https.onRequest((request, response) => 
 
     cors(request, response, async () => {
         try {
-            const data = request.body;
-            const orderId = data.orderId;
-            const address = data.address;
-            const email = data.email;
-            const phoneNo = data.phoneNo;
-            const amount = data.amount;
-
+            const data = request?.body;
+            console.log('Request data : ', data)
+            const orderId = data?.orderId;
+            const address = data?.address;
+            let customerName;
+            let email = data?.email;
+            let customerEmail;
+            let phoneNo = data?.phoneNo;
+            let customerPhoneNo;
+            let amount;
+            // let cash;
             console.log('Order id : ', orderId);
 
             const items = [];
             await admin.firestore().collection("orders").doc(orderId.toString())
                 .get().then(snapshot => {
-                    const docData = snapshot.data();
+                    const docData = snapshot?.data();
+                    amount = +docData?.totalPrice;
+                    customerName = docData?.customerName;
+                    customerEmail = docData?.email;
+                    customerPhoneNo = docData?.phoneNo
+                    amount = +docData?.cashAmount;
                     const foodItems = docData?.foodItems;
                     for (const [key, value] of Object.entries(foodItems)) {
                         items.push(
@@ -44,7 +53,6 @@ export const generateReceipt = functions.https.onRequest((request, response) => 
                             })
                     }
                 });
-
 
             const pdfDocHeight = calculateReceiptHeight(items);
             let y = 0;
@@ -91,13 +99,21 @@ export const generateReceipt = functions.https.onRequest((request, response) => 
                     pdfDoc.moveDown();
                     pdfDoc.text(`${phoneNo} / ${email}`,);
                     pdfDoc.moveDown();
-                    pdfDoc.text(`Mode      : ${docData.mode}`);
+                    pdfDoc.fontSize(9).text(`Customer name      : ${customerName}`);
+                    pdfDoc.moveDown();
+                    pdfDoc.text(`Customer email      : ${customerEmail}`);
+                    pdfDoc.moveDown();
+                    pdfDoc.text(`Customer phone no   : ${customerPhoneNo}`);
+                    pdfDoc.moveDown();
+                    pdfDoc.text(`Mode       : ${docData.mode}`);
+                    pdfDoc.moveDown();
+                    pdfDoc.text(`Note       : ${docData.note}`);
                     pdfDoc.fontSize(8).text('______________________________________________', {align: 'center'})
                 })
                 .catch(error =>{
-                    console.error(error)
+                    console.error(error);
                 })
-            y = 190;
+            y = 280;
             // Receipt Items
             pdfDoc.font('Helvetica-Bold').fontSize(10);
             pdfDoc.text('Item Name', 10, y, {width: 60, align: 'left'});
@@ -109,11 +125,14 @@ export const generateReceipt = functions.https.onRequest((request, response) => 
             pdfDoc.font('Helvetica').fontSize(10);
             console.log('FoodItems : ', items);
             y += 20;
-            for (const item of items) {
+            for (const item of items){
+                console.log(item)
                 pdfDoc.text(item?.name, 10, y, {width: 200, align: 'left'});
-                pdfDoc.text(`$${item?.unitPrice.toFixed(2)}`, 50, (y + 15), {width: 50, align: 'right'});
+                const unitPrice = +item?.unitPrice.toFixed(2)
+                pdfDoc.text(`$${unitPrice}`, 50, (y + 15), {width: 50, align: 'right'});
                 pdfDoc.text(`${item?.quantity}`, 110,  (y + 15) , {width: 50, align: 'right'});
-                pdfDoc.text(`$${item?.total.toFixed(2)}`, 180,  (y + 15) , {width: 40, align: 'right'});
+                const totalPrice = +item?.total.toFixed(2);
+                pdfDoc.text(`$${totalPrice}`, 180,  (y + 15) , {width: 40, align: 'right'});
                 pdfDoc.moveDown(1);
                 y += 35;
             }
@@ -131,6 +150,7 @@ export const generateReceipt = functions.https.onRequest((request, response) => 
                 .then(snapshot => {
                     const docData = snapshot.data();
                     const totalPrice = docData.totalPrice;
+                    console.log('taxPercentage : ', data?.taxPercentage)
                     const taxPercentage = data?.taxPercentage || 0;
                     // Receipt Summary
                     pdfDoc.font('Helvetica-Bold');
@@ -150,7 +170,8 @@ export const generateReceipt = functions.https.onRequest((request, response) => 
                     pdfDoc.text(`$${amount.toFixed(2)}`, {align: 'right'});
                     y+=20;
                     pdfDoc.text('Balance  :', 10 , y,  { align: 'left', continued:true});
-                    pdfDoc.text(`$${amount - grandTotal}`, {align: 'right'});
+                    const balance = (amount - grandTotal).toFixed(2)
+                    pdfDoc.text(`$${balance}`, {align: 'right'});
 
                     pdfDoc.moveDown();
                 });
@@ -167,8 +188,8 @@ export const generateReceipt = functions.https.onRequest((request, response) => 
             console.log('pdf generation ended')
 
             writeStream.on('finish', async () => {
-                response.setHeader('Content-Type', 'application/pdf');
-                response.setHeader('Content-Disposition', 'attachment; filename=Receipt.pdf');
+                // response.setHeader('Content-Type', 'application/pdf');
+                // response.setHeader('Content-Disposition', 'attachment; filename=Receipt.pdf');
                 // Once the PDF is created and saved with a custom path, send a response
                 // Generate a signed URL with a 1-hour expiration time
                 // const options = {
@@ -191,11 +212,11 @@ export const generateReceipt = functions.https.onRequest((request, response) => 
                 //         console.error('Error generating access link:', error);
                 //         // Handle the error appropriately.
                 //     });
-                response.status(200).send('Receipt PDF saved successfully');
+                response.status(200).send({response:'Receipt PDF saved successfully'});
             });
         } catch (error) {
             console.log(error);
-            response.status(500).send('Error in generating receipt')
+            response.status(500).send({response: 'Error in generating receipt'})
         }
     })
 });

@@ -15,11 +15,14 @@ app.post('/process_payment', async (request, response) => {
     const data = request?.body;
     const terminalId = data?.terminalId;
     const paymentIntentId = data?.paymentIntentId;
-    const amount = data?.amount;
+    const amount = +data?.amount;
     const uid = data?.uid;
     const name = data?.name;
     const phoneNo = data?.phoneNo;
     const email = data?.email;
+    const note = data?.note;
+    const mode = data?.mode;
+    const paymentOption = data?.paymentOption;
     console.log(uid)
     try {
         await stripe.terminal.readers.setReaderDisplay(
@@ -55,7 +58,12 @@ app.post('/process_payment', async (request, response) => {
             lastModifiedAt: new Date().toISOString(),
             customerName: name,
             phoneNo: phoneNo,
-            email: email
+            email: email,
+            amount:(+amount / 100),
+            note:note,
+            mode:mode,
+            paymentOption:paymentOption,
+            lastOrderId:''
         }
         await admin.firestore().collection('carts')
             .doc(uid).update(data)
@@ -70,7 +78,6 @@ app.post('/process_payment', async (request, response) => {
             }
         );
         let dataAfterPayment = {
-            status: 'ORDER_PLACED',
             paymentIntentId: paymentIntent?.id,
         }
         await admin.firestore().collection('carts').doc(uid)
