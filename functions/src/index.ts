@@ -27,10 +27,10 @@ exports.assignARole = assignARole.assignARole;
 exports.assignRoles = assignRoles.assignRoles;
 //
 exports.generateReceipt = generateReceipt.generateReceipt;
-
+//
 exports.terminal = terminal.terminal;
 exports.terminal_payment = terminal_payment.terminalPayment;
 exports.simulate_card_tapping = simulate_card_tap.simulateCardTapping;
 exports.payment_intent = payment_intent.paymentIntent;
-//
+
 // exports.webhooks = webhooks.webhooks;

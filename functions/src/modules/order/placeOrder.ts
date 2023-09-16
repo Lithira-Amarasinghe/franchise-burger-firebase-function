@@ -2,7 +2,7 @@
 
 import functions = require("firebase-functions");
 import admin = require("firebase-admin");
-
+const {onDocumentCreated} = require("firebase-functions/v2/firestore");
 // eslint-disable-next-line require-jsdoc
 function addOrderPlacedToFoodItem(data) {
   const foodItems = data.foodItems;

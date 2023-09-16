@@ -1,15 +1,14 @@
 /*eslint-disable*/
 
-const functions = require('firebase-functions');
+const {onRequest} = require("firebase-functions/v2/https");
 const express = require('express');
 const app = express();
 const cors = require('cors')
-const stripe = require('stripe')
-('sk_test_51Nic2dLJfluVTg0aHqpKmjA7Y8SxySEOaDxrcTUxS49VZnO3rO9UlVSEsiPRwJCNygACyn0WCVFOmGTYpUf4BshT00lfRWpoHG');
 
 app.use(cors({origin: true}))
 
 app.post('/', async (request, response) => {
+    const stripe = require('stripe')(process.env.STRIPE_API_KEY);
 
     const data = request?.body;
     const amount = data?.amount;
@@ -28,6 +27,8 @@ app.post('/', async (request, response) => {
 });
 
 app.get('/:paymentIntentId', async (request, response) => {
+    const stripe = require('stripe')(process.env.STRIPE_API_KEY);
+
     const paymentIntentId = request.params.paymentIntentId;
     console.log('payment intent id : ', request)
     try {
@@ -39,4 +40,8 @@ app.get('/:paymentIntentId', async (request, response) => {
     }
 });
 
-export const paymentIntent = functions.https.onRequest(app);
+export const paymentIntent = onRequest(
+    {
+        secrets:['STRIPE_API_KEY'],
+        maxInstances: 10
+    },app);

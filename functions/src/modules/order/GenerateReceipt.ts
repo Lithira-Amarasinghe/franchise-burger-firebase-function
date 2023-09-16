@@ -10,7 +10,7 @@ const os = require('os');
 
 const cors = corsModule({origin: true}); // Import the cors module
 
-const dimensionConst = 2.83464567;
+// const dimensionConst = 2.83464567;
 
 function calculateReceiptHeight(items: any[]) {
     let noOfItems = items.length;

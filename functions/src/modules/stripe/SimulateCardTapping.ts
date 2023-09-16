@@ -1,12 +1,12 @@
 /*eslint-disable*/
-const functions = require('firebase-functions');
+
+const {onRequest} = require("firebase-functions/v2/https");
 const express = require('express');
 const app = express();
 
-const stripe = require('stripe')
-('sk_test_51Nic2dLJfluVTg0aHqpKmjA7Y8SxySEOaDxrcTUxS49VZnO3rO9UlVSEsiPRwJCNygACyn0WCVFOmGTYpUf4BshT00lfRWpoHG');
-
 app.post('/', async (request, response) => {
+    const stripe = require('stripe')(process.env.STRIPE_API_KEY);
+
     const data = request?.body;
     const terminalId = data?.terminalId;
     try {
@@ -17,4 +17,8 @@ app.post('/', async (request, response) => {
     }
 })
 
-export const simulateCardTapping = functions.https.onRequest(app);
+export const simulateCardTapping = onRequest(
+    {
+        secrets:['STRIPE_API_KEY'],
+        maxInstances: 10
+    },app);
