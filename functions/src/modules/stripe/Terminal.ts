@@ -20,6 +20,8 @@ const {defineSecret} = require("firebase-functions/params");
 // const endpointSecret = "whsec_2f644nf6isYGMWsjheZjTms6FrjDKRgu";
 // const endpointSecret = defineSecret("STRIPE_ENDPOINT_SECRET")
 
+const usersCollection='user';
+
 
 app.use(cors({origin: true}))
 
@@ -80,25 +82,20 @@ app.post('/webhook/terminal_payment_success', express.raw({type: 'application/js
     async (request, response) => {
         // functions.runWith({secrets:['SUPER_SRETE']})
         const stripe = require('stripe')(process.env.STRIPE_API_KEY);
-        console.log('Stripe api key : ', process.env.STRIPE_API_KEY)
         let event;
         const sig = request.headers['stripe-signature'];
-        console.log('endpointSecret : ', process.env.STRIPE_ENDPOINT_SECRET)
-        console.log('endpointSecret value : ', process.env.STRIPE_ENDPOINT_SECRET)
         try {
             event = stripe.webhooks.constructEvent(request.rawBody, sig, process.env.STRIPE_ENDPOINT_SECRET);
         } catch (err) {
             response.status(400).send(`Webhook Error: ${err.message}`);
         }
         // event=request.body;
-        // console.log('Request data : ',event)
-        // console.log('Event type   : ', event.type)
+        console.log('Request data : ',event)
         // response.status(200).send();
         // Handle the event
         switch (event.type) {
             case 'terminal.reader.action_succeeded':
                 const paymentIntent = event.data.object;
-                // console.log('Payment intent: ',paymentIntent)
                 console.log('payment intent succeeded')
                 let cartDocData;
                 let docId;
@@ -117,7 +114,7 @@ app.post('/webhook/terminal_payment_success', express.raw({type: 'application/js
                             console.log('cart doc data : ',cartDocData);
                         })
                     })
-                admin.firestore().collection('carts').doc(docId)
+                await admin.firestore().collection('carts').doc(docId)
                     .update({
                         status: 'ORDER_PLACED'
                     }).then((result:any) => {
@@ -138,6 +135,58 @@ app.post('/webhook/terminal_payment_success', express.raw({type: 'application/js
 
         // Return a response to acknowledge receipt of the event
         response.status(200).send();
+    });
+
+app.post('/webhook/terminal_payment_failed', express.raw({type: 'application/json'}),
+    async (request, response) => {
+        const stripe = require('stripe')(process.env.STRIPE_API_KEY);
+        let event;
+        const sig = request.headers['stripe-signature'];
+        try {
+            event = stripe.webhooks.constructEvent(request.rawBody, sig, process.env.STRIPE_ENDPOINT_SECRET);
+        } catch (err) {
+            response.status(400).send(`Webhook Error: ${err.message}`);
+        }
+        // event=request.body;
+        console.log('Request data : ',event)
+        // response.status(200).send();
+        // Handle the event
+        switch (event.type) {
+            case 'terminal.reader.action_failed':
+                const terminalReaderActionFailed = event.data.object;
+                const paymentIntent = event.data.object;
+                console.log('Payment failed')
+                let cartDocData;
+                let docId;
+                let paymentIntentId = paymentIntent.action.process_payment_intent.payment_intent;
+                console.log('payment intend Id : ',paymentIntentId)
+                await admin.firestore().collection('carts')
+                    .where('paymentIntentId', '==', paymentIntentId)
+                    .get()
+                    .then((querySnapshot) => {
+                        // Iterate through the filtered documents
+                        querySnapshot.forEach((doc) => {
+                            // Access the data of each document
+                            const data = doc.data();
+                            cartDocData = data;
+                            docId = cartDocData.uid
+                            console.log('cart doc data : ',cartDocData);
+                        })
+                    })
+                await admin.firestore().collection('carts').doc(docId)
+                    .update({
+                        status: 'ORDER_FAILED'
+                    }).then((result:any) => {
+                    console.log('Payment failed');
+                });
+                break;
+            // ... handle other event types
+            default:
+                console.log(`Unhandled event type ${event.type}`);
+        }
+
+        // Return a 200 response to acknowledge receipt of the event
+        response.send();
     });
 
 // export const terminal = functions.https.onRequest(app);

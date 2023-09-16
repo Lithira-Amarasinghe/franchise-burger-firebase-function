@@ -10,6 +10,8 @@ app.use(cors({origin: true}))
 
 app.post('/process_payment', async (request, response) => {
     const stripe = require('stripe')(process.env.STRIPE_API_KEY);
+    let usersCollection='user';
+    let cartsCollection='carts';
 
     const data = request?.body;
     const terminalId = data?.terminalId;
@@ -22,7 +24,7 @@ app.post('/process_payment', async (request, response) => {
     const note = data?.note;
     const mode = data?.mode;
     const paymentOption = data?.paymentOption;
-    console.log(uid)
+    console.log('',uid)
     try {
         await stripe.terminal.readers.setReaderDisplay(
             terminalId,
@@ -53,6 +55,14 @@ app.post('/process_payment', async (request, response) => {
             capture_method: 'automatic',
             amount: amount,
         });
+        await admin.firestore().collection(usersCollection)
+            .doc(uid).update({
+                lastOrderId:'',
+                lastOrderStatus:''
+            })
+            .then(result => console.log('Last Order id removed before terminal payment start'))
+            .catch(error => console.error('Error in removing last order id : ', error))
+
         let data = {
             lastModifiedAt: new Date().toISOString(),
             customerName: name,
@@ -62,12 +72,12 @@ app.post('/process_payment', async (request, response) => {
             note:note,
             mode:mode,
             paymentOption:paymentOption,
-            lastOrderId:''
+            status: ''
         }
-        await admin.firestore().collection('carts')
+        await admin.firestore().collection(cartsCollection)
             .doc(uid).update(data)
-            .then(result => console.log('Payment intent id saved '))
-            .catch(error => console.error('Error in saving payment intent id ', error))
+            .then(result => console.log('Cart updated successfully. Updated data : ', data))
+            .catch(error => console.error('Error in updating cart : ', error))
 
         console.log('Payment intent : ', paymentIntent)
         const reader = await stripe.terminal.readers.processPaymentIntent(
@@ -79,10 +89,10 @@ app.post('/process_payment', async (request, response) => {
         let dataAfterPayment = {
             paymentIntentId: paymentIntent?.id,
         }
-        await admin.firestore().collection('carts').doc(uid)
+        await admin.firestore().collection(cartsCollection).doc(uid)
             .update(dataAfterPayment)
             .then(result => console.log('Payment intent id saved '))
-            .catch(error => console.error('Error in saving payment intent id ', error))
+            .catch(error => console.error('Error in saving payment intent id : ', error))
         response.status(200).send(reader);
 
     } catch (error) {
