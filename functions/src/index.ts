@@ -3,7 +3,7 @@ import admin = require("firebase-admin");
 admin.initializeApp();
 
 const assignUserRoleOnSignUp=require("./modules/user/AssignUserRoleOnSignUp");
-const placeOrder = require("./modules/order/placeOrder");
+const placeOrder = require("./modules/order/PlaceOrder");
 const orderReady = require("./modules/order/orderReady");
 const generateReceipt = require('./modules/order/GenerateReceipt');
 

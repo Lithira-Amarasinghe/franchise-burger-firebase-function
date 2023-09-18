@@ -14,9 +14,11 @@ app.post('/process_payment', async (request, response) => {
     let cartsCollection='carts';
 
     const data = request?.body;
+    console.log('Payment process request data : ',data)
     const terminalId = data?.terminalId;
     const paymentIntentId = data?.paymentIntentId;
-    const amount = +data?.amount;
+    const totalPrice = +data?.totalPrice;
+    const cashAmount = +data?.cashAmount;
     const uid = data?.uid;
     const name = data?.name;
     const phoneNo = data?.phoneNo;
@@ -26,34 +28,34 @@ app.post('/process_payment', async (request, response) => {
     const paymentOption = data?.paymentOption;
     console.log('',uid)
     try {
-        await stripe.terminal.readers.setReaderDisplay(
-            terminalId,
-            {
-                type: 'cart',
-                cart: {
-                    line_items: [
-                        {
-                            description: 'Caramel latte',
-                            amount: 659,
-                            quantity: 1,
-                        },
-                        {
-                            description: 'Dozen donuts',
-                            amount: 1239,
-                            quantity: 1,
-                        },
-                    ],
-                    currency: 'usd',
-                    tax: 100,
-                    total: amount,
-                },
-            }
-        );
+        // await stripe.terminal.readers.setReaderDisplay(
+        //     terminalId,
+        //     {
+        //         type: 'cart',
+        //         cart: {
+        //             line_items: [
+        //                 {
+        //                     description: 'Caramel latte',
+        //                     amount: 659,
+        //                     quantity: 1,
+        //                 },
+        //                 {
+        //                     description: 'Dozen donuts',
+        //                     amount: 1239,
+        //                     quantity: 1,
+        //                 },
+        //             ],
+        //             currency: 'usd',
+        //             tax: 100,
+        //             total: amount,
+        //         },
+        //     }
+        // );
         const paymentIntent = await stripe.paymentIntents.create({
             currency: 'usd',
             payment_method_types: ['card_present'],
             capture_method: 'automatic',
-            amount: amount,
+            amount: cashAmount,
         });
         await admin.firestore().collection(usersCollection)
             .doc(uid).update({
@@ -68,11 +70,12 @@ app.post('/process_payment', async (request, response) => {
             customerName: name,
             phoneNo: phoneNo,
             email: email,
-            amount:(+amount / 100),
+            cashAmount:(+cashAmount / 100),
             note:note,
             mode:mode,
             paymentOption:paymentOption,
-            status: ''
+            status: '',
+            balance:0
         }
         await admin.firestore().collection(cartsCollection)
             .doc(uid).update(data)
