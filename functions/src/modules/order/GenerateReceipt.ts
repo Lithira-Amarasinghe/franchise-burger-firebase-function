@@ -2,7 +2,6 @@
 import * as corsModule from 'cors'
 
 const {onRequest} = require("firebase-functions/v2/https");
-// const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 const PDFDocument = require('pdfkit');
 const {Storage} = require('@google-cloud/storage');

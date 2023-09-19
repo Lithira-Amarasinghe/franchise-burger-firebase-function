@@ -1,8 +1,6 @@
 /*eslint-disable*/
 
 import admin = require("firebase-admin");
-import {runWith} from "firebase-functions";
-// const functions = require('firebase-functions');
 const {onRequest} = require("firebase-functions/v2/https");
 const express = require('express');
 const app = express();
