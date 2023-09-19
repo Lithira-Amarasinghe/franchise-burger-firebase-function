@@ -12,10 +12,11 @@ const cors = corsModule({origin: true}); // Import the cors module
 
 // const dimensionConst = 2.83464567;
 
-function calculateReceiptHeight(items: any[]) {
+function calculateReceiptHeight(items: any[], headerDynamicRowCount: number) {
     let noOfItems = items.length;
-    let height = noOfItems * 35
-    height += 520;
+    let height = noOfItems * 35;
+    height +=headerDynamicRowCount * 20
+    height += 440;
     return height;
 }
 
@@ -36,6 +37,11 @@ export const generateReceipt = onRequest({
         let customerEmail;
         let phoneNo = data?.phoneNo;
         let customerPhoneNo;
+        let note;
+        let foodItems;
+
+        let headerDynamicRowCount = 0;
+
         // let cash;
         console.log('Order id : ', orderId);
 
@@ -43,10 +49,27 @@ export const generateReceipt = onRequest({
         await admin.firestore().collection("orders").doc(orderId.toString())
             .get().then(snapshot => {
                 const docData = snapshot?.data();
-                customerName = docData?.customerName;
-                customerEmail = docData?.email;
-                customerPhoneNo = docData?.phoneNo
-                const foodItems = docData?.foodItems;
+                if(docData?.customerName){
+                    headerDynamicRowCount++;
+                    customerName = docData?.customerName;
+                }
+                if(docData?.email){
+                    headerDynamicRowCount++
+                    customerEmail = docData?.email;
+                }
+                if(docData?.phoneNo){
+                    headerDynamicRowCount++
+                    customerPhoneNo = docData?.phoneNo;
+
+                }
+                if(docData?.foodItems){
+                    headerDynamicRowCount++
+                    foodItems = docData?.foodItems;
+                }
+
+                note = docData?.note;
+
+
                 for (const [key, value] of Object.entries(foodItems)) {
                     items.push(
                         // @ts-ignore
@@ -55,7 +78,7 @@ export const generateReceipt = onRequest({
                 }
             });
 
-        const pdfDocHeight = calculateReceiptHeight(items);
+        const pdfDocHeight = calculateReceiptHeight(items, headerDynamicRowCount);
         let y = 0;
 
         console.log('Receipt height : ', pdfDocHeight)
@@ -63,7 +86,7 @@ export const generateReceipt = onRequest({
         const pdfDoc: any = new PDFDocument({
             size: [227, pdfDocHeight],
             margins: {
-                left: 10,
+                left: 6,
                 top: 10,
                 bottom: 10,
                 right: 10
@@ -78,9 +101,7 @@ export const generateReceipt = onRequest({
 
         // Set up the PDF content
         pdfDoc.pipe(writeStream);
-
-        const taxRate = 0.1; // 10% tax rate
-
+        
         await admin.firestore().collection("orders").doc(orderId.toString()).get()
             .then(snapshot => {
                 const docData = snapshot.data();
@@ -99,23 +120,31 @@ export const generateReceipt = onRequest({
                 pdfDoc.moveDown();
                 pdfDoc.text(`${phoneNo} / ${email}`,);
                 pdfDoc.moveDown();
-                pdfDoc.fontSize(9).text(`Customer name      : ${customerName}`);
-                pdfDoc.moveDown();
-                pdfDoc.text(`Customer email      : ${customerEmail}`);
-                pdfDoc.moveDown();
-                pdfDoc.text(`Customer phone no   : ${customerPhoneNo}`);
-                pdfDoc.moveDown();
+                if(customerName) {
+                    pdfDoc.fontSize(9).text(`Customer name      : ${customerName}`);
+                    pdfDoc.moveDown();
+                }
+                if(customerEmail) {
+                    pdfDoc.text(`Customer email      : ${customerEmail}`);
+                    pdfDoc.moveDown();
+                }
+                if(customerPhoneNo) {
+                    pdfDoc.text(`Customer phone no   : ${customerPhoneNo}`);
+                    pdfDoc.moveDown();
+                }
                 pdfDoc.text(`Mode       : ${docData.mode}`);
                 pdfDoc.moveDown();
                 pdfDoc.text(`Payment option : ${docData.paymentOption}`);
                 pdfDoc.moveDown();
-                pdfDoc.text(`Note       : ${docData.note}`);
+                if(note) {
+                    pdfDoc.text(`Note       : ${note}`);
+                }
                 pdfDoc.fontSize(8).text('______________________________________________', {align: 'center'})
             })
             .catch(error => {
                 console.error(error);
             })
-        y = 310;
+        y = 220 + headerDynamicRowCount * 20;
         // Receipt Items
         pdfDoc.font('Helvetica-Bold').fontSize(10);
         pdfDoc.text('Item Name', 10, y, {width: 60, align: 'left'});
@@ -153,8 +182,8 @@ export const generateReceipt = onRequest({
                 const docData = snapshot.data();
                 console.log('Order details (firestore) : ', docData)
                 const totalPrice = +docData.totalPrice;
-                console.log('taxPercentage : ', data?.taxPercentage)
-                const taxPercentage = docData?.taxPercentage || 0;
+                console.log('taxPercentage : ', data?.tax)
+                const tax = docData?.tax || 0;
                 const cashAmount = docData?.cashAmount;
                 console.log('Cash amount : ', +cashAmount);
                 // Receipt Summary
@@ -164,18 +193,16 @@ export const generateReceipt = onRequest({
                 pdfDoc.text(`$${totalPrice.toFixed(2)}`, {align: 'right'});
                 y += 20;
                 pdfDoc.text('Tax         :', 10, y, {align: 'left', continued: true});
-                const taxAmount = totalPrice * taxPercentage / 100;
-                pdfDoc.text(`$${taxAmount.toFixed(2)}`, {align: 'right'});
+                pdfDoc.text(`$${tax.toFixed(2)}`, {align: 'right'});
                 y += 20;
                 pdfDoc.fontSize(12).text('Grand Total :', 10, y, {align: 'left', continued: true});
-                const grandTotal = (+totalPrice) + (+taxAmount);
-                pdfDoc.text(`$${grandTotal.toFixed(2)}`, {align: 'right'});
+                pdfDoc.text(`$${totalPrice.toFixed(2)}`, {align: 'right'});
                 y += 20;
                 pdfDoc.fontSize(10).text('CASH/CARD  :', 10, y, {align: 'left', continued: true});
                 pdfDoc.text(`$${cashAmount.toFixed(2)}`, {align: 'right'});
                 y += 20;
                 pdfDoc.text('Balance  :', 10, y, {align: 'left', continued: true});
-                const balance: number = (+cashAmount) - (+grandTotal)
+                const balance: number = (+cashAmount) - (+totalPrice)
                 pdfDoc.text(`$${balance.toFixed(2)}`, {align: 'right'});
 
                 pdfDoc.moveDown();
