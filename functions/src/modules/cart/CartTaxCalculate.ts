@@ -4,7 +4,7 @@ import functions = require("firebase-functions");
 
 
 export const calculateTaxOnCartUpdate = functions.firestore.document("carts/{uid}")
-    .onUpdate(async (change, context) => {
+    .onWrite(async (change, context) => {
         try {
             // Get an object with the current document values.
             // If the document does not exist, it was deleted

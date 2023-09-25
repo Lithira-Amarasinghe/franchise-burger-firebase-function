@@ -49,6 +49,7 @@ export const generateReceipt = onRequest({
         await admin.firestore().collection("orders").doc(orderId.toString())
             .get().then(snapshot => {
                 const docData = snapshot?.data();
+                console.log('Order data : ',docData)
                 if(docData?.customerName){
                     headerDynamicRowCount++;
                     customerName = docData?.customerName;
@@ -62,10 +63,11 @@ export const generateReceipt = onRequest({
                     customerPhoneNo = docData?.phoneNo;
 
                 }
-                if(docData?.foodItems){
-                    headerDynamicRowCount++
+                console.log('Food items contain : ', docData?.foodItems)
+                // if(docData?.foodItems){
+                //     headerDynamicRowCount++
                     foodItems = docData?.foodItems;
-                }
+                // }
 
                 note = docData?.note;
 
@@ -101,7 +103,7 @@ export const generateReceipt = onRequest({
 
         // Set up the PDF content
         pdfDoc.pipe(writeStream);
-        
+
         await admin.firestore().collection("orders").doc(orderId.toString()).get()
             .then(snapshot => {
                 const docData = snapshot.data();
@@ -144,7 +146,7 @@ export const generateReceipt = onRequest({
             .catch(error => {
                 console.error(error);
             })
-        y = 220 + headerDynamicRowCount * 20;
+        y = 250 + headerDynamicRowCount * 20;
         // Receipt Items
         pdfDoc.font('Helvetica-Bold').fontSize(10);
         pdfDoc.text('Item Name', 10, y, {width: 60, align: 'left'});
@@ -224,27 +226,29 @@ export const generateReceipt = onRequest({
             // response.setHeader('Content-Disposition', 'attachment; filename=Receipt.pdf');
             // Once the PDF is created and saved with a custom path, send a response
             // Generate a signed URL with a 1-hour expiration time
-            // const options = {
-            //     action: 'read',
-            //     expires: Date.now() + 60 * 60 * 1000, // 1 hour in milliseconds
-            // };
-            // // Generate the signed URL
-            // let signURL;
-            // await admin.storage().bucket().file('receipts/16161616.pdf').getSignedUrl(options)
-            //     .then((urls) => {
-            //          signURL = urls;
-            //         console.log('Access Link:', signURL);
-            //         // You can now use the accessLink to provide public access to the file.
-            //         return admin.firestore().collection('orders').doc(orderId)
-            //             .update({receiptURL: signURL})
-            //     }).then(result =>{
-            //         console.log('URL saved :',result)
-            //     })
-            //     .catch((error) => {
-            //         console.error('Error generating access link:', error);
-            //         // Handle the error appropriately.
-            //     });
-            response.status(200).send({response: 'Receipt PDF saved successfully'});
+            const options = {
+                action: 'read',
+                expires: Date.now() + 60 * 60 * 1000, // 1 hour in milliseconds
+            };
+            // Generate the signed URL
+            let signURL;
+            await admin.storage().bucket().file(`receipts/${orderId}`).getSignedUrl(options)
+                .then((urls) => {
+                     signURL = urls;
+                    console.log('Access Link:', signURL);
+                    // You can now use the accessLink to provide public access to the file.
+                    return admin.firestore().collection('orders').doc(orderId)
+                        .update({receiptURL: signURL})
+                }).then(result =>{
+                    console.log('URL saved :',result)
+                })
+                .catch((error) => {
+                    console.error('Error generating access link:', error);
+                    // Handle the error appropriately.
+                });
+            response.status(200).send(
+                {response: signURL, message:'Successfully receipt generated'}
+            );
         });
     } catch (error) {
         console.log(error);

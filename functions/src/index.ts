@@ -17,6 +17,7 @@ const simulate_card_tap = require('./modules/stripe/SimulateCardTapping');
 const payment_intent = require('./modules/stripe/PaymentIntent');
 
 const calculateTaxOnCartUpdate = require('./modules/cart/CartTaxCalculate');
+const removeLastOrderDetailsFromUser = require('./modules/cart/RemoveLastOrderDetailsFromUser');
 
 exports.placeOrder = placeOrder.placeOrder;
 exports.orderReady = orderReady.orderReady;
@@ -34,5 +35,6 @@ exports.simulate_card_tapping = simulate_card_tap.simulateCardTapping;
 exports.payment_intent = payment_intent.paymentIntent;
 
 exports.calculateTaxOnCartUpdate = calculateTaxOnCartUpdate.calculateTaxOnCartUpdate;
+exports.removeLastOrderDetailsFromUser = removeLastOrderDetailsFromUser.removeLastOrderDetailsFromUser;
 
 // exports.webhooks = webhooks.webhooks;

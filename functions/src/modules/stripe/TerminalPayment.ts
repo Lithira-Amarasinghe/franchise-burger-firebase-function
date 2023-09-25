@@ -92,6 +92,7 @@ app.post('/process_payment', async (request, response) => {
         let dataAfterPayment = {
             paymentIntentId: paymentIntent?.id,
         }
+        console.log(dataAfterPayment)
         await admin.firestore().collection(cartsCollection).doc(uid)
             .update(dataAfterPayment)
             .then(result => console.log('Payment intent id saved '))
@@ -142,6 +143,36 @@ app.post('/process_payment', async (request, response) => {
 //     // Return a 200 response to acknowledge receipt of the event
 //     response.send();
 // });
+
+
+app.post('/refund', async (request, response) => {
+    const stripe = require('stripe')(process.env.STRIPE_API_KEY);
+
+    const body = request.body
+
+    const refund = await stripe.refunds.create({
+        payment_intent: body.paymentIntentId,
+    });
+    console.log('Request body : ',body)
+    console.log('Refund object : ',refund)
+
+    if(refund.status=='succeeded'){
+        await admin.firestore().collection('orders').doc(body.orderId)
+            .update({
+                status:'REFUNDED'
+            }).then(result =>{
+                console.log('Refunded')
+                console.log('Order id : ', body.orderId)
+            }).catch(error =>{
+                console.error('Error in updating order after refund : ',error)
+            })
+        response.status(200).send({
+            message: 'successfully refunded',
+            data: refund
+        })
+    }
+    response.status(500).status({message:'error'})
+});
 
 export const terminalPayment = onRequest(
     {
